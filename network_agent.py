@@ -10,6 +10,13 @@ from keras.engine.topology import Layer
 import os
 from keras.callbacks import EarlyStopping, TensorBoard
 import pickle as pkl
+from datetime import datetime
+from packaging import version
+
+print("TensorFlow version: ", tf.__version__)
+assert version.parse(tf.__version__).release[0] >= 2, \
+    "This notebook requires TensorFlow 2.0 or above."
+
 
 from agent import Agent
 import copy
@@ -381,6 +388,10 @@ class NetworkAgent(Agent):
         return action
 
     def train_network(self, dic_exp_conf):
+        
+        # Define the Keras TensorBoard callback.
+        logdir="logs/fit/" + datetime.now().strftime("%Y%m%d-%H%M%S")
+        tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
 
         if dic_exp_conf["PRETRAIN"] or dic_exp_conf["AGGREGATE"]:
             epochs = 1000
@@ -395,11 +406,11 @@ class NetworkAgent(Agent):
 
             hist = self.q_network.fit(self.Xs, self.Y, batch_size=batch_size, epochs=epochs,
                                       shuffle=False,
-                                      verbose=2, validation_split=0.3, callbacks=[early_stopping])
+                                      verbose=2, validation_split=0.3, callbacks=[early_stopping,tensorboard_callback])
         elif self.dic_agent_conf["EARLY_STOP_LOSS"] == "loss":
             early_stopping = EarlyStopping(
                 monitor='loss', patience=self.dic_agent_conf["PATIENCE"], verbose=0, mode='min')
 
             hist = self.q_network.fit(self.Xs, self.Y, batch_size=batch_size, epochs=epochs,
                                       shuffle=False,
-                                      verbose=2, callbacks=[early_stopping])
+                                      verbose=2, callbacks=[early_stopping,tensorboard_callback])
